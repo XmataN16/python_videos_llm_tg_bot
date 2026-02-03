@@ -1,4 +1,3 @@
-# src/schemas.py
 from pydantic import BaseModel
 from typing import Optional, Dict
 from datetime import date

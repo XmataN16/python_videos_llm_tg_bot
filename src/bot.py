@@ -5,6 +5,7 @@ from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
 
+from .parser import RussianQueryParser
 from .database import Database
 from .schemas import QueryParams
 
@@ -19,6 +20,7 @@ router = Router()
 
 # Глобальные объекты
 db = Database()
+parser = RussianQueryParser()
 
 @router.message(Command("start"))
 async def cmd_start(message: types.Message):
@@ -31,6 +33,38 @@ async def cmd_start(message: types.Message):
         "• На сколько просмотров в сумме выросли все видео 28 ноября 2025?\n"
         "• Сколько разных видео получали новые просмотры 27 ноября 2025?"
     )
+
+@router.message()
+async def handle_query(message: types.Message):
+    if not message.text:
+        await message.answer("❌ Пожалуйста, отправьте текстовый запрос")
+        return
+    
+    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+    
+    try:
+        # Шаг 1: Парсинг запроса
+        query_params = parser.parse(message.text)
+        
+        if not query_params:
+            await message.answer(
+                "❓ Не удалось распознать запрос. Попробуйте сформулировать его по примерам из /start"
+            )
+            return
+        
+        logger.info(f"Parsed: {query_params.query_type} | Params: {query_params.parameters}")
+        
+        # Шаг 2: Выполнение запроса к БД
+        result = await db.execute_query(query_params)
+        
+        # Шаг 3: Отправка результата (ТОЛЬКО число!)
+        await message.answer(str(result))
+        
+    except ValueError as e:
+        await message.answer(f"⚠️ Ошибка в параметрах запроса: {str(e)}")
+    except Exception as e:
+        logger.error(f"Query error: {e}", exc_info=True)
+        await message.answer("❌ Внутренняя ошибка сервера")
 
 
 async def main():

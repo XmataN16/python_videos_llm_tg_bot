@@ -1,6 +1,7 @@
 import os
 import asyncpg
 from typing import Optional
+from datetime import datetime, timezone
 from .schemas import QueryParams
 
 
@@ -43,13 +44,16 @@ class Database:
             arg_num = 2
             
             if "start_date" in params:
-                query += f" AND video_created_at >= ${arg_num}::timestamptz"
-                args.append(f"{params['start_date']} 00:00:00+00")
+                # Конвертируем строку в datetime с UTC временной зоной
+                start_dt = datetime.strptime(f"{params['start_date']} 00:00:00", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+                query += f" AND video_created_at >= ${arg_num}"
+                args.append(start_dt)
                 arg_num += 1
             
             if "end_date" in params:
-                query += f" AND video_created_at <= ${arg_num}::timestamptz"
-                args.append(f"{params['end_date']} 23:59:59+00")
+                end_dt = datetime.strptime(f"{params['end_date']} 23:59:59", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+                query += f" AND video_created_at <= ${arg_num}"
+                args.append(end_dt)
             
             return await self.pool.fetchval(query, *args)
         
@@ -66,23 +70,28 @@ class Database:
             date = params.get("date")
             if not date:
                 raise ValueError("date required")
+            # Конвертируем дату в datetime объекты для начала и конца дня (UTC)
+            start_dt = datetime.strptime(f"{date} 00:00:00", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            end_dt = datetime.strptime(f"{date} 23:59:59", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
             return await self.pool.fetchval("""
                 SELECT COALESCE(SUM(delta_views_count), 0)
                 FROM video_snapshots
-                WHERE created_at >= $1::timestamptz AND created_at < $2::timestamptz
-            """, f"{date} 00:00:00+00", f"{date} 23:59:59+00")
+                WHERE created_at >= $1 AND created_at < $2
+            """, start_dt, end_dt)
         
         elif query_type == "videos_with_new_views":
             date = params.get("date")
             if not date:
                 raise ValueError("date required")
+            start_dt = datetime.strptime(f"{date} 00:00:00", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            end_dt = datetime.strptime(f"{date} 23:59:59", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
             return await self.pool.fetchval("""
                 SELECT COUNT(DISTINCT video_id)
                 FROM video_snapshots
-                WHERE created_at >= $1::timestamptz 
-                  AND created_at < $2::timestamptz 
+                WHERE created_at >= $1 
+                  AND created_at < $2 
                   AND delta_views_count > 0
-            """, f"{date} 00:00:00+00", f"{date} 23:59:59+00")
+            """, start_dt, end_dt)
         
         else:
             raise ValueError(f"Unknown query type: {query_type}")
