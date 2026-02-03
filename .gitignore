@@ -34,9 +34,9 @@ Thumbs.db
 # Базы данных
 *.db
 
-# Тестовые данные
-test_data/
-*.json.backup
+# Тестовые данные (большие JSON файлы)
+data/
+!data/.gitkeep
 
 # Дистрибутивы
 dist/
