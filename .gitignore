@@ -1,0 +1,53 @@
+# Виртуальное окружение
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Кэш Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Переменные окружения
+.env
+.env.local
+.env.*.local
+
+# Логи
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Базы данных
+*.db
+
+# Тестовые данные
+test_data/
+*.json.backup
+
+# Дистрибутивы
+dist/
+build/
+*.egg-info/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
